@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+  <url>
+    <loc>http://lanly-dev.github.com/assets/css/fontawesome-free-5.0.6/README.html</loc>
+
+    <lastmod>2021-03-07</lastmod>
+
+  </url>
+
+  <url>
+    <loc>http://lanly-dev.github.com/assets/css/font-mfizz-2.4.1/preview.html</loc>
+
+    <lastmod>2021-03-07</lastmod>
+
+  </url>
+
+  <url>
+    <loc>http://lanly-dev.github.com/2021/03/06/hello-world/index.html</loc>
+
+    <lastmod>2021-03-06</lastmod>
+
+  </url>
+
+
+  <url>
+    <loc>http://lanly-dev.github.com/</loc>
+    <lastmod>2021-03-07</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+
+
+
+</urlset>
