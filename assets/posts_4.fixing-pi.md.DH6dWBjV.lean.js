@@ -1,0 +1,1 @@
+import{_ as t,c as e,o as i}from"./chunks/framework.Dh1jimFm.js";const d=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"posts/4.fixing-pi.md","filePath":"posts/4.fixing-pi.md"}'),s={name:"posts/4.fixing-pi.md"};function a(o,n,r,p,c,_){return i(),e("div")}const m=t(s,[["render",a]]);export{d as __pageData,m as default};
