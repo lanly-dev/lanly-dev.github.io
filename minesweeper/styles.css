@@ -299,6 +299,7 @@ body.dark .modal button {
 }
 
 #high-scores-modal {
+  min-width: 15em;
   display: none;
   background-color: white;
   border: 2px solid #ccc;
@@ -320,10 +321,6 @@ body.dark #high-scores-modal {
 #high-scores-modal ul {
   list-style: none;
   padding: 0;
-}
-
-#high-scores-modal li {
-  margin-bottom: 5px;
 }
 
 #high-scores-modal button {
