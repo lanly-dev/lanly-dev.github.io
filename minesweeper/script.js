@@ -63,14 +63,13 @@ const sounds = {
   err: document.getElementById('err-sound')
 }
 
-// eslint-disable-next-line max-len
-const longT = 'UGxlYXNlS2VlcFRoaXNTZWNyZXRnaXRodWJfcGF0XzExQURNTDZQQTA5TGE0aWRtVld4MWNfOVY2ZmNscEpucHNKS0lRaUQxb1h5bkhQR0tyZUh2RjRIcUplNkp6aWxVZVBYQ1I1TkdRYk9jcjNOZ0g=.UGxlYXNlS2VlcFRoaXNTZWNyZXQ='
+const longT = 'UGxlYXNldGhpc2lzYXNlY3JldHNvZG9ub3RzaGFyZWl0YW5kbGV0bWVrbm93aWZ5b3VzZWV0aGlzbWVzc2FnZUlhbWN1cmlvdXNpZnlvdWRvZ2l0aHViX3BhdF8xMUFETUw2UEEwMkh5MjNPNE1JdmdKX1NiNVpYUG5MUFJCakdWZUIxa01FUzlYR1BTNzloeTB4OFVYMElyWkhXUU5ZSTVITVdFSXd2MEpaQjh4.UGxlYXNldGhpc2lzYXNlY3JldHNvZG9ub3RzaGFyZWl0YW5kbGV0bWVrbm93aWZ5b3VzZWV0aGlzbWVzc2FnZUlhbWN1cmlvdXNpZnlvdWRv'
 const [t, es] = longT.split('.')
 const s = atob(es)
 const token = atob(t).replace(s, '')
 
-const REPO = 'lanly-dev/test-submit'
-const PATH_FILE = 'scores.json'
+const REPO = 'lanly-dev/data-submissions'
+const PATH_FILE = 'website-ms-scores.json'
 const REPO_URL = `https://api.github.com/repos/${REPO}/contents/${PATH_FILE}`
 
 let currentSettings = {
@@ -439,6 +438,11 @@ async function fetchHighScores() {
     // Filter scores based on the selected board size
     const filteredScores = content.filter(score => score.boardSize === selectedFilter)
 
+    if (!filteredScores.length) {
+      highScoresList.innerHTML = '<div>No scores available for this board size</div>'
+      return
+    }
+
     highScoresList.innerHTML = ''
     filteredScores
       .sort((a, b) => a.time - b.time) // Sort by time (ascending)
@@ -461,7 +465,7 @@ async function fetchHighScores() {
       })
   } catch (error) {
     alert(`Error fetching high scores: ${error.message}`)
-    highScoresList.innerHTML = '<li>Error loading high scores.</li>'
+    highScoresList.innerHTML = '<div>Error loading high scores❗</div>'
   }
 }
 
