@@ -3,11 +3,11 @@
   <title>Lan Ly&#39;s Blog</title>
 
 
-  <link href="http://lanly-dev.github.com/atom.xml" rel="self"/>
+  <link href="http://lanly-dev.github.io/atom.xml" rel="self"/>
 
-  <link href="http://lanly-dev.github.com/"/>
+  <link href="http://lanly-dev.github.io/"/>
   <updated>2021-03-06T21:45:26.887Z</updated>
-  <id>http://lanly-dev.github.com/</id>
+  <id>http://lanly-dev.github.io/</id>
 
   <author>
     <name>Lan Ly</name>
@@ -18,8 +18,8 @@
 
   <entry>
     <title>Hello World</title>
-    <link href="http://lanly-dev.github.com/old/portfolio/2021/03/06/hello-world/index.html"/>
-    <id>http://lanly-dev.github.com/2021/03/06/hello-world/index.html</id>
+    <link href="http://lanly-dev.github.io/portfolio-old/2021/03/06/hello-world/index.html"/>
+    <id>http://lanly-dev.github.io/2021/03/06/hello-world/index.html</id>
     <published>2021-03-06T21:45:26.887Z</published>
     <updated>2021-03-06T21:45:26.887Z</updated>
 
