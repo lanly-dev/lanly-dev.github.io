@@ -72,6 +72,9 @@ const REPO = 'lanly-dev/data-submissions'
 const PATH_FILE = 'website-ms-scores.json'
 const REPO_URL = `https://api.github.com/repos/${REPO}/contents/${PATH_FILE}`
 
+const COUNTERS_FILE = 'website-ms-counters.json'
+const COUNTERS_URL = `https://api.github.com/repos/${REPO}/contents/${COUNTERS_FILE}`
+
 let currentSettings = {
   boardSize: 'small',
   isDeciseconds: false,
@@ -93,12 +96,14 @@ let movesCount = 0
 let timerInterval
 let timerUnit = 'seconds'
 
+let touchTimer
+let activeTouchCell
+
 resetBtn.addEventListener('click', () => {
   resetGame()
   resetAnimation()
   playSound(sounds.reset)
 })
-
 applySettingsBtn.addEventListener('click', () => {
   applySettingsHandler()
   toggleOverlay(false)
@@ -114,12 +119,10 @@ submitScoreBtn.addEventListener('click', submitScore)
 closeScoreFormBtn.addEventListener('click', () => {
   scoreForm.style.display = 'none'
 })
-
 viewHighScoresBtn.addEventListener('click', () => {
   fetchHighScores()
   highScoresModal.style.display = 'block'
 })
-
 closeHighScoresBtn.addEventListener('click', () => {
   highScoresModal.style.display = 'none'
 })
@@ -173,6 +176,7 @@ function cellClickHandler(event) {
   if (firstClick) {
     ensureSafeFirstClick(event.target)
     firstClick = false
+    updateCounters(false, false, true)
     gameStarted = true
     smileyAnimation()
     startTimer()
@@ -193,6 +197,58 @@ function cellDoubleClickHandler(event) {
   if (event.target.classList.contains('revealed') && event.target.textContent) {
     revealAdjacentCells(parseInt(row), parseInt(col))
   }
+}
+
+gameBoard.addEventListener('touchmove', function(event) {
+  const cell = activeTouchCell
+  if (!cell || !cell.classList.contains('cell')) return
+  if (typeof cell._touchStartX !== 'number' || typeof cell._touchStartY !== 'number') return
+  const touch = event.touches[0]
+  if (!touch) return
+  const dx = Math.abs(touch.clientX - cell._touchStartX)
+  const dy = Math.abs(touch.clientY - cell._touchStartY)
+  if (dx > 10 || dy > 10) {
+    cell._touchMoved = true
+    clearTimeout(touchTimer)
+  }
+})
+
+function cellTouchStartHandler(event) {
+  const cell = event.target
+  activeTouchCell = cell
+  cell.longPress = false
+  cell._touchMoved = false
+  cell._touchStartX = event.touches && event.touches[0] ? event.touches[0].clientX : 0
+  cell._touchStartY = event.touches && event.touches[0] ? event.touches[0].clientY : 0
+  cell._suppressNextTap = false
+  touchTimer = setTimeout(() => {
+    // Only flag if finger hasn't moved and cell is still active
+    if (activeTouchCell === cell && !cell._touchMoved) {
+      putFlagHandler({ target: cell, preventDefault: () => {} })
+      cell.longPress = true
+      cell._suppressNextTap = true
+    }
+  }, 300)
+}
+
+function cellTouchEndHandler(event) {
+  clearTimeout(touchTimer)
+  const cell = activeTouchCell
+  activeTouchCell = null
+  if (!cell) return
+  // Prevent any action if user was scrolling
+  if (cell._touchMoved) {
+    cell._touchMoved = false
+    return
+  }
+  if (cell._suppressNextTap) {
+    cell._suppressNextTap = false
+    return
+  }
+  if (!cell.longPress) {
+    cellClickHandler({ target: cell })
+  }
+  cell.longPress = false
 }
 
 function smileyAnimation() {
@@ -218,6 +274,14 @@ function disableBoard(bool) {
   gameBoard.classList.toggle('disabled', bool)
 }
 
+function getDeviceType() {
+  return (
+    'ontouchstart' in window ||
+    navigator.maxTouchPoints > 0 ||
+    navigator.msMaxTouchPoints > 0
+  ) ? 'mobile' : 'desktop'
+}
+
 function initBoard() {
   disableBoard(false)
   gameBoard.style.gridTemplateColumns = `repeat(${boardSize}, 30px)`
@@ -229,7 +293,11 @@ function initBoard() {
       cell.classList.add('cell', currentSettings.cellShape)
       cell.dataset.row = row
       cell.dataset.col = col
-      cell.addEventListener('click', cellClickHandler)
+      if (getDeviceType() !== 'mobile') {
+        cell.addEventListener('click', cellClickHandler)
+      }
+      cell.addEventListener('touchstart', cellTouchStartHandler)
+      cell.addEventListener('touchend', cellTouchEndHandler)
       if (currentSettings.doubleClickReveal) {
         cell.addEventListener('dblclick', cellDoubleClickHandler)
       }
@@ -315,6 +383,40 @@ function resetTimer() {
   updateTimerDisplay()
 }
 
+async function updateCounters(win, loss, attempt) {
+  try {
+    const response = await fetch(COUNTERS_URL, {
+      headers: {
+        Authorization: `token ${token}`,
+        Accept: 'application/vnd.github.v3+json'
+      }
+    })
+    const { content, sha } = await response.json()
+    const counters = JSON.parse(atob(content))
+
+    if (win) counters.wins++
+    if (loss) counters.losses++
+    if (attempt) counters.attempts++
+
+    const icon = win ? '🥇' : loss ? '💥' : '🧹'
+
+    await fetch(COUNTERS_URL, {
+      method: 'PUT',
+      headers: {
+        Authorization: `token ${token}`,
+        Accept: 'application/vnd.github.v3+json'
+      },
+      body: JSON.stringify({
+        message: `Update ${icon} counter`,
+        content: btoa(JSON.stringify(counters, null, 2)),
+        sha
+      })
+    })
+  } catch (error) {
+    alert(`Error updating counters: ${error.message}`)
+  }
+}
+
 function revealCell(row, col, needPopSound = true) {
   if (row < 0 || col < 0 || row >= boardSize || col >= boardSize) return
   const cell = board[row][col]
@@ -324,6 +426,7 @@ function revealCell(row, col, needPopSound = true) {
   cell.element.classList.add('revealed')
 
   if (cell.mine) {
+    // Game over
     cell.element.classList.add('mine')
     cell.element.textContent = '💣'
     disableBoard(true)
@@ -332,6 +435,7 @@ function revealCell(row, col, needPopSound = true) {
     revealHiddenMines()
     resetBtn.textContent = '😆'
     playSound(sounds.over)
+    updateCounters(false, true, false)
     return
   }
   const mineCount = countMines(row, col)
@@ -360,6 +464,7 @@ function revealCell(row, col, needPopSound = true) {
     stopTimer()
     resetBtn.textContent = '😎'
     playSound(sounds.win)
+    updateCounters(true, false, false)
     return
   }
   smileyAnimation()
@@ -380,13 +485,26 @@ function revealHiddenMines() {
   }
 }
 
+function decodeBase64ToUtf8(base64String) {
+  const binaryString = atob(base64String)
+  const bytes = new Uint8Array(binaryString.length)
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i)
+  }
+  return new TextDecoder('utf-8').decode(bytes)
+}
+
 async function submitScore() {
   const playerName = document.getElementById('player-name').value
+  const platform = navigator.userAgentData?.platform || navigator.platform || 'Unknown Platform'
+  const deviceType = getDeviceType()
   const score = {
     name: playerName,
     time: elapsedTime,
     moves: movesCount,
     boardSize: currentSettings.boardSize,
+    platform, // Include platform in the score
+    device: deviceType, // Add device type
     date: new Date().toISOString()
   }
   // console.log('Submitting score:', score)
@@ -399,7 +517,7 @@ async function submitScore() {
       }
     })
     const data = await response.json()
-    const content = JSON.parse(atob(data.content))
+    const content = JSON.parse(decodeBase64ToUtf8(data.content))
     content.push(score)
 
     const updatedContent = btoa(JSON.stringify(content, null, 2))
@@ -423,6 +541,24 @@ async function submitScore() {
 
 async function fetchHighScores() {
   try {
+    // Fetch win/loss counters from COUNTERS_URL
+    let winCount = -1, lossCount = -1, attemptCount = -1
+    try {
+      const countersResp = await fetch(COUNTERS_URL, {
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: 'application/vnd.github.v3+json'
+        }
+      })
+      const countersData = await countersResp.json()
+      const counters = JSON.parse(atob(countersData.content))
+      winCount = counters.wins ?? 0
+      lossCount = counters.losses ?? 0
+      attemptCount = counters.attempts ?? 0
+    } catch (e) {
+      alert(`Error fetching counters: ${e.message}`)
+    }
+
     const response = await fetch(REPO_URL, {
       headers: {
         Authorization: `token ${token}`,
@@ -430,7 +566,7 @@ async function fetchHighScores() {
       }
     })
     const data = await response.json()
-    const content = JSON.parse(atob(data.content))
+    const content = JSON.parse(decodeBase64ToUtf8(data.content))
 
     // Get the selected board size filter
     const selectedFilter = document.querySelector('input[name="scores-filter"]:checked').value
@@ -443,7 +579,15 @@ async function fetchHighScores() {
       return
     }
 
+    // Show win/loss counter at the top (from COUNTERS_URL)
+    const counterDiv = document.createElement('div')
+    counterDiv.style.marginBottom = '8px'
+    counterDiv.style.fontWeight = 'bold'
+    counterDiv.innerHTML = `🥇${winCount} 💥${lossCount} 🧹${attemptCount}`
+    counterDiv.title = `Wins: ${winCount}, Losses: ${lossCount}, Attempts: ${attemptCount}`
     highScoresList.innerHTML = ''
+    highScoresList.appendChild(counterDiv)
+
     filteredScores
       .sort((a, b) => a.time - b.time) // Sort by time (ascending)
       .slice(0, 10) // Show top 10 scores
@@ -460,7 +604,11 @@ async function fetchHighScores() {
 
         listItem.appendChild(nameSpan)
         listItem.appendChild(timeSpan)
-        listItem.title = `${score.name} - ${score.time}s - ${score.moves} moves`
+        const date = new Date(score.date).toLocaleString()
+        let d
+        if (!score.device) d = '❓'
+        else d = score.device === 'mobile' ? '📱' : '💻'
+        listItem.title = `${d}|${score.name}|⌛${score.time}|👣${score.moves}|${date}`
         highScoresList.appendChild(listItem)
       })
   } catch (error) {
